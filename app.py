@@ -182,7 +182,7 @@ with tab_journal:
             "quantity": st.column_config.NumberColumn("数量"),
             "manual_market_value": st.column_config.NumberColumn("手动市值(期权)", format="$ %.2f", help="期权请手动输入当前市值")
         },
-        use_container_width=True,
+        width="stretch",
         key="editor_b1"
     )
 
@@ -201,7 +201,7 @@ with tab_journal:
             "cost_to_close": st.column_config.NumberColumn("实际平仓成本", format="$ %.2f", help="只有Closed状态才填"),
             "estimated_cost_to_close": st.column_config.NumberColumn("估计平仓成本", format="$ %.2f", help="Open状态填入当前市场价格，用于计算浮动盈亏"),
         },
-        use_container_width=True,
+        width="stretch",
         key="editor_b2"
     )
 
@@ -215,7 +215,7 @@ with tab_journal:
             "quantity": st.column_config.NumberColumn("数量"),
             "manual_market_value": st.column_config.NumberColumn("手动市值(期权)", format="$ %.2f", help="期权请手动输入当前市值")
         },
-        use_container_width=True,
+        width="stretch",
         key="editor_b3"
     )
 
@@ -405,7 +405,7 @@ with tab_dash:
             "p_l_pct": st.column_config.NumberColumn("盈亏%", format="%.2f%%"),
             "quantity": st.column_config.NumberColumn("数量"),
         },
-        use_container_width=True, 
+        width="stretch",
         hide_index=True
     )
 
@@ -431,7 +431,7 @@ with tab_dash:
             "p_l": st.column_config.NumberColumn("浮动盈亏", format="$ %.2f"),
         },
         column_order=("status", "strategy", "ticker", "expiration_date", "days_to_expiration", "margin_used", "premium_received", "estimated_cost_to_close", "p_l", "notes"),
-        use_container_width=True, 
+        width="stretch",
         hide_index=True
     )
 
@@ -455,7 +455,7 @@ with tab_dash:
             "p_l_pct": st.column_config.NumberColumn("盈亏%", format="%.2f%%"),
             "quantity": st.column_config.NumberColumn("数量"),
         },
-        use_container_width=True, 
+        width="stretch",
         hide_index=True
     )
 
@@ -473,7 +473,7 @@ with tab_journal:
             "p_l": st.column_config.NumberColumn("已实现利润", format="$ %.2f"),
         },
         column_order=("status", "strategy", "ticker", "expiration_date", "premium_received", "cost_to_close", "p_l", "notes"),
-        use_container_width=True, 
+        width="stretch",
         hide_index=True
     )
     
@@ -494,7 +494,7 @@ with col_refresh1:
     if st.button("🔄 刷新价格", type="secondary"):
         st.cache_resource.clear()
         st.rerun()
-with tab_refresh2:
+with col_refresh2:
     st.caption(f"💡 提示：股票价格每5分钟自动更新。期权价格需要手动在'交易日志'中更新。")
 
 # --- 🆕 14. 设置选项卡 ---
@@ -530,7 +530,7 @@ with tab_settings:
             "当前值": st.column_config.NumberColumn("当前值", format="%.2f"),
             "说明": st.column_config.TextColumn("说明", disabled=True)
         },
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         key="settings_editor"
     )
