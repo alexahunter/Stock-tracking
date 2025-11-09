@@ -1,24 +1,38 @@
-💰 三桶投资组合仪表板 (V2.2 - Google Sheets 版)
+💰 投资组合仪表板 (V3.0 - Google Sheets 版)
 
 这是一个使用 Streamlit 构建的个人投资仪表板，用于跟踪您的“三桶”投资策略。
 
-此版本 (V2.2) 具有持久化存储功能。您的所有持仓数据都将安全地存储在您自己的 Google Sheet 中，而不是在浏览器会话中丢失。
+此版本 (V3.0) 具有持久化存储功能，并增加了设置选项卡和高级计算功能。您的所有持仓数据和设置都将安全地存储在您自己的 Google Sheet 中。
 
-🚀 功能
+🚀 功能 (V3.0)
 
 持久化存储: 数据保存在您私有的 Google Sheet 中。
 
-准确的市值: 自动获取股票/ETF价格，并允许您手动输入期权市值以获得100%准确的盈亏。
+设置选项卡: 在一个专门的 settings 工作表中管理您的总资金、月目标、警告阈值。
 
-桶2策略跟踪: 专为期权收入策略设计，可跟踪 status (Open/Closed), margin (保证金), premium (权利金), cost to close (平仓成本), 和 DTE (剩余天数)。
+准确的市值: 自动获取股票/ETF价格，并允许您手动输入期权市值。
 
-交易日志: "交易日志 & 编辑" 选项卡可作为您的永久交易记录，用于复盘和记录心得 (notes 列)。
+桶2高级跟踪:
 
-动态仪表板: "仪表板" 选项卡只显示您当前的持仓快照和关键指标。
+计算浮动盈亏 (基于 estimated_cost_to_close)。
 
-🛠️ 首次设置指南 (必读)
+计算已实现盈亏 (基于 cost_to_close)。
 
-您需要执行一次性设置，以授权 Streamlit (无论是本地还是云端) 读取您的 Google Sheet。这大约需要 5-10 分钟。
+自动计算 DTE (剩余天数) 并发出警告。
+
+桶3高级跟踪:
+
+计算盈亏百分比 (p_l_pct)。
+
+根据您在设置中定义的阈值发出止损警告。
+
+交易日志: "交易日志" 选项卡可作为您的永久交易记录，用于复盘和记录心得 (notes 列)。
+
+动态仪表板: "当前持仓" 选项卡只显示您的持仓快照和关键指标（总投资、总盈亏、现金等）。
+
+🛠️ 首次设置指南 (V3.0)
+
+您需要执行一次性设置，以授权 Streamlit 读取您的 Google Sheet。
 
 第1步：创建您的 Google Sheet
 
@@ -26,42 +40,52 @@
 
 将其命名为您喜欢的名字 (例如："我的投资组合")。
 
-在底部创建三个工作表 (Tabs)，并精确命名为：桶1, 桶2, 桶3。
+在底部创建四个工作表 (Tabs)，并精确命名为：
 
-设置 桶1 和 桶3 的表头 (第1行):
+bucket1
 
-在 桶1 的 A1:F1，精确填入以下表头：
+bucket2
+
+bucket3
+
+settings
+
+设置 bucket1 和 bucket3 的表头 (第1行):
+
+在 A1:F1，精确填入以下表头 (6 列)：
 ticker | type | quantity | total_cost | notes | manual_market_value
 
-在 桶3 的 A1:F1，精确填入以下表头：
-ticker | type | quantity | total_cost | notes | manual_market_value
+设置 bucket2 的表头 (第1行):
 
-设置 桶2 的表头 (第1行):
+在 A1:I1，精确填入以下表头 (9 列)：
+status | strategy | ticker | expiration_date | margin_used | premium_received | cost_to_close | estimated_cost_to_close | notes
 
-在 桶2 的 A1:H1，精确填入以下表头 (共8列)：
-status | strategy | ticker | expiration_date | margin_used | premium_received | cost_to_close | notes
+设置 settings 的表头 (第1行):
 
-您可以现在就填入几行数据 (例如您的 AVGO 持仓)，或者留空。
+在 A1:B1，精确填入以下表头 (2 列)：
+parameter_name | value
+
+在 A2:B5 填入您的初始设置，例如：
+| parameter_name | value |
+| :--- | :--- |
+| total_capital | 100000 |
+| monthly_income_target | 1500 |
+| stop_loss_threshold | -20 |
+| dte_warning_threshold | 21 |
 
 第2步：创建 Google Service Account (服务帐户)
 
-这是为了获取一个“机器人帐户”的密钥，以便 Streamlit 可以代表您编辑表格。
-
 访问 Google Cloud Console。
 
-如果您是第一次使用，请同意服务条款。
-
-在顶部搜索栏或 "Select a project" (选择项目) 下拉菜单中，点击 "New Project" (新建项目)。
+点击 "New Project" (新建项目)。
 
 给项目起一个名字 (例如："Streamlit Dashboard")，然后点击 "Create" (创建)。
 
 启用 APIs:
 
-等待项目创建完成 (右上角会有通知)。确保您的新项目已被选中。
+项目创建完成后，在顶部搜索栏中搜索 "Google Drive API"，点击进入并 "Enable" (启用)。
 
-在顶部搜索栏中，搜索 "Google Drive API"，并点击进入。点击 "Enable" (启用)。
-
-再次搜索 "Google Sheets API"，并点击进入。点击 "Enable" (启用)。
+再次搜索 "Google Sheets API"，点击进入并 "Enable" (启用)。
 
 创建服务帐户:
 
@@ -69,17 +93,15 @@ status | strategy | ticker | expiration_date | margin_used | premium_received | 
 
 点击 "+ Create Service Account" (创建服务帐户)。
 
-给它一个名字 (例如："sheets-editor")，然后点击 "Create and Continue" (创建并继续)。
+给它一个名字 (例如："sheets-editor")，点击 "Create and Continue" (创建并继续)。
 
-在 "Grant this service account access to project" (授予此服务帐户对项目的访问权限) 步骤中，选择角色 (Role) 为 "Editor" (编辑者)。
+选择角色 (Role) 为 "Editor" (编辑者)。
 
 点击 "Continue" (继续)，然后点击 "Done" (完成)。
 
 获取 JSON 密钥:
 
-您现在会看到您的新服务帐户的电子邮件地址 (例如：sheets-editor@your-project-id.iam.gserviceaccount.com)。
-
-点击它。
+点击您刚创建的服务帐户的电子邮件地址。
 
 转到 "Keys" (密钥) 选项卡。
 
@@ -87,28 +109,19 @@ status | strategy | ticker | expiration_date | margin_used | premium_received | 
 
 选择 JSON 格式，然后点击 "Create" (创建)。
 
-一个 .json 密钥文件将自动下载到您的计算机。请妥善保管此文件，不要公开分享它。
+一个 .json 密钥文件将自动下载。
 
 第3步：将密钥 (Key) 添加到 Streamlit Secrets
 
-这是最关键的一步，也是您之前遇到 "TOML" 错误的地方。
+在您的 Streamlit Cloud 应用页面，点击 "Settings" (设置) -> "Secrets" (密钥)。
 
-在本地运行:
+打开您下载的 .json 密钥文件 (例如用记事本)。
 
-在您的项目文件夹中，创建一个名为 .streamlit 的文件夹。
-
-在 .streamlit 文件夹内，创建一个名为 secrets.toml 的文件。
-
-部署到 Streamlit Cloud:
-
-在您的应用部署页面，点击 "Settings" (设置) -> "Secrets" (密钥)。
-
-打开您下载的 .json 密钥文件 (例如用记事本或任何文本编辑器)。
-
-复制下面的模板，并将其粘贴到您的 secrets.toml 文件或 Streamlit Cloud 的 Secrets 文本框中：
+复制下面的 TOML 模板，并将其粘贴到 Secrets 文本框中：
 
 # 这是正确的 TOML 格式
-[gsheets]
+[connections.gsheets]
+spreadsheet = "..." # ⬅️ 步骤4b
 type = "..."
 project_id = "..."
 private_key_id = "..."
@@ -122,40 +135,33 @@ client_email = "..."
 
 逐个将 .json 文件中的值（只复制引号内的部分）粘贴到 Secrets 模板中 ... 的位置（确保保留模板中的双引号 "）。
 
-示例：
-
-如果您的 .json 文件显示:
-"project_id": "ibkr-dashboard-476718",
-
-您复制 ibkr-dashboard-476718
-
-您粘贴到 Secrets 中，使其看起来像:
-project_id = "ibkr-dashboard-476718"
-
-最重要的：private_key
-
-您的 .json 文件显示:
-"private_key": "-----BEGIN PRIVATE KEY-----\nAAAA...\n...BBBB\n-----END PRIVATE KEY-----\n",
+private_key 的重要提示：
 
 您必须复制引号内的所有内容（包括 -----BEGIN...，\n 字符，以及 ...END PRIVATE KEY-----）。
 
-您粘贴到 Secrets 中，使其看起来像:
+粘贴后应如下所示：
 private_key = "-----BEGIN PRIVATE KEY-----\nAAAA...\n...BBBB\n-----END PRIVATE KEY-----\n"
 
-第4步：分享您的 Google Sheet
+第4步：分享您的 Google Sheet 并添加链接
 
-这是最后一步。
+分享 (Share):
 
 回到您在第1步中创建的 Google Sheet。
 
 点击右上角的 "Share" (分享) 按钮。
 
-找到您在第2步中创建的服务帐户的电子邮件地址 (它在您的 .json 文件中，名为 client_email，例如：sheets-editor@your-project-id.iam.gserviceaccount.com)。
+复制您 .json 文件中的 client_email (服务帐户的电子邮件地址)。
 
-将这个电子邮件地址粘贴到 "Share" 框中。
+将这个电子邮件地址粘贴到 "Share" 框中，并确保其权限为 "Editor" (编辑者)。
 
-确保它被赋予 "Editor" (编辑者) 权限。
+添加链接 (Add Link) (⬅️ 重要):
 
-点击 "Share" (分享)。
+复制您的 Google Sheet 的浏览器 URL 链接。
 
-全部完成！ 现在，当您运行或重新启动您的 Streamlit 应用时，app.py 中的 conn = st.connection("gsheets", ...) 代码将使用您的 Secrets，安全地连接到您的 Google Sheet 并读取数据。
+返回 Streamlit Secrets。
+
+将这个 URL 链接粘贴到 spreadsheet = "..." 的 ... 位置。
+
+示例: spreadsheet = "https://docs.google.com/spreadsheets/d/1A.../edit"
+
+全部完成！ 重启您的应用。它现在将使用您的 V3.0 代码连接到您的新工作表。
