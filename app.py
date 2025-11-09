@@ -42,7 +42,7 @@ def get_stock_price(ticker):
 def load_settings_from_gsheet():
     """🆕 从 Google Sheets 加载设置参数"""
     try:
-        df_settings = conn.read(worksheet="settings", usecols=list(range(2)), ttl=60)   
+        df_settings = conn.read(worksheet="settings", usecols=list(range(2)), ttl=600)   
         # 转换为字典
         settings = {}
         for _, row in df_settings.iterrows():
@@ -65,10 +65,10 @@ def load_settings_from_gsheet():
 def load_data_from_gsheet():
     """从 Google Sheets 加载三个桶的数据"""
     try:
-        df_b1 = conn.read(worksheet="bucket1", usecols=list(range(6)), ttl=5)
+        df_b1 = conn.read(worksheet="bucket1", usecols=list(range(6)), ttl=600)
         # 桶2现在有9列 (添加了 estimated_cost_to_close)
-        df_b2 = conn.read(worksheet="bucket2", usecols=list(range(9)), ttl=5)
-        df_b3 = conn.read(worksheet="bucket3", usecols=list(range(6)), ttl=5)
+        df_b2 = conn.read(worksheet="bucket2", usecols=list(range(9)), ttl=600)
+        df_b3 = conn.read(worksheet="bucket3", usecols=list(range(6)), ttl=600)
 
         # 确保必要列存在
         if 'manual_market_value' not in df_b1.columns:
