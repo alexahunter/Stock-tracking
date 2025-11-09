@@ -361,19 +361,19 @@ with tab_dash:
     
     with col2:
         st.metric(
-            "🪣 桶1 市值",
+            "❇️桶1 市值",
             f"${total_b1_value:,.0f}",
             f"P/L: ${total_b1_pl:,.0f}"
         )
         st.metric(
-            "🪣 桶3 市值",
+            "🤑桶3 市值",
             f"${total_b3_value:,.0f}",
             f"P/L: ${total_b3_pl:,.0f}"
         )
     
     with col3:
         st.metric(
-            "🪣 桶2 占用保证金",
+            "🍀💵桶2 占用保证金",
             f"${total_b2_margin:,.0f}",
             f"{(total_b2_margin/total_capital)*100:.1f}%"
         )
@@ -413,7 +413,7 @@ with tab_dash:
     st.divider()
 
     # --- 桶1详情 ---
-    st.subheader("🪣 桶1：长期持仓核心")
+    st.subheader("❇️桶1：长期持仓核心")
     st.dataframe(
         df_b1_processed,
         column_config={
@@ -430,7 +430,7 @@ with tab_dash:
     )
 
     # --- 桶2 Open持仓 ---
-    st.subheader("🪣 桶2：当前持仓 (Open)")
+    st.subheader("🍀💵桶2：当前持仓 (Open)")
     st.caption("💡 '浮动盈亏' = 收到权利金 - 估计平仓成本")
     
     # 🆕 添加DTE警告
@@ -456,7 +456,7 @@ with tab_dash:
     )
 
     # --- 桶3详情 ---
-    st.subheader("🪣 桶3：投机交易")
+    st.subheader("🤑桶3：投机交易")
     
     # 🆕 添加止损警告
     if not df_b3_processed.empty:
@@ -482,7 +482,7 @@ with tab_dash:
 # --- 12. 在交易日志选项卡中显示已平仓记录 ---
 with tab_journal:
     st.divider()
-    st.header("🪣 桶2：已平仓记录 (复盘)")
+    st.header("💵桶2：已平仓记录 (复盘)")
     st.dataframe(
         closed_b2,
         column_config={
