@@ -40,7 +40,7 @@ def get_stock_price(ticker):
 
 # --- 5. 从 Google Sheets 加载数据 ---
 def load_settings_from_gsheet():
-    """🆕 从 Google Sheets 加载设置参数"""
+    """从 Google Sheets 加载设置参数"""
     try:
         df_settings = conn.read(worksheet="setting", usecols=list(range(2)), ttl=600)   
         # 转换为字典
@@ -66,7 +66,6 @@ def load_data_from_gsheet():
     """从 Google Sheets 加载三个桶的数据"""
     try:
         df_b1 = conn.read(worksheet="bucket1", usecols=list(range(6)), ttl=600)
-        # 桶2现在有9列 (添加了 estimated_cost_to_close)
         df_b2 = conn.read(worksheet="bucket2", usecols=list(range(9)), ttl=600)
         df_b3 = conn.read(worksheet="bucket3", usecols=list(range(6)), ttl=600)
 
@@ -85,7 +84,6 @@ def load_data_from_gsheet():
             df_b2['premium_received'] = 0.0
         if 'cost_to_close' not in df_b2.columns:
             df_b2['cost_to_close'] = 0.0
-        # 🆕 新增列：估计平仓成本（用于计算浮动盈亏）
         if 'estimated_cost_to_close' not in df_b2.columns:
             df_b2['estimated_cost_to_close'] = 0.0
 
@@ -113,7 +111,7 @@ def create_default_dfs():
         'margin_used': [3000.0, 10000.0],
         'premium_received': [1000.0, 500.0],
         'cost_to_close': [0.0, 50.0],
-        'estimated_cost_to_close': [0.0, 0.0], # 🆕
+        'estimated_cost_to_close': [0.0, 0.0],
         'notes': ['优先级1', '已实现利润']
     })
     df_b3 = pd.DataFrame({
@@ -161,30 +159,22 @@ def calculate_market_value(df_input):
 
 # --- 7. 加载数据到 Session State ---
 if 'loaded_data' not in st.session_state:
-    # 🆕 加载设置
     st.session_state.settings = load_settings_from_gsheet()
-    # 加载桶数据
     df_b1_loaded, df_b2_loaded, df_b3_loaded = load_data_from_gsheet()
     
-    # ------------------- 关键修复 V3.1 -------------------
-    # 立即清理桶2的数据类型，防止 data_editor 因类型不匹配而崩溃
-    # （桶1和桶3在 calculate_market_value 函数中已有清理）
     try:
         df_b2_loaded['margin_used'] = pd.to_numeric(df_b2_loaded['margin_used'], errors='coerce').fillna(0.0)
         df_b2_loaded['premium_received'] = pd.to_numeric(df_b2_loaded['premium_received'], errors='coerce').fillna(0.0)
         df_b2_loaded['cost_to_close'] = pd.to_numeric(df_b2_loaded['cost_to_close'], errors='coerce').fillna(0.0)
         df_b2_loaded['estimated_cost_to_close'] = pd.to_numeric(df_b2_loaded['estimated_cost_to_close'], errors='coerce').fillna(0.0)
-        # 强制将 expiration_date 转换为日期时间对象，无效值（如空单元格）将变为 NaT (Not a Time)
         df_b2_loaded['expiration_date'] = pd.to_datetime(df_b2_loaded['expiration_date'], errors='coerce')
         df_b2_loaded['expiration_date'] = df_b2_loaded['expiration_date'].apply(lambda x: None if pd.isna(x) else x)
-        
     except Exception as e:
         st.error(f"加载桶2数据时类型转换失败: {e}")
         st.info("请检查您 Google Sheet 'bucket2' 工作表中的数字和日期列。")
-    # ----------------- END FIX V3.1 -----------------
 
     st.session_state.df_b1 = df_b1_loaded
-    st.session_state.df_b2 = df_b2_loaded # ⬅️ 现在是清理过的数据
+    st.session_state.df_b2 = df_b2_loaded
     st.session_state.df_b3 = df_b3_loaded
     st.session_state.loaded_data = True
 
@@ -239,7 +229,6 @@ with tab_journal:
         key="editor_b3"
     )
 
-    # --- 保存按钮 ---
     st.divider()
     if st.button("💾 保存全部更改到 Google Sheets", type="primary"):
         with st.spinner("正在保存..."):
@@ -269,41 +258,31 @@ with tab_journal:
 df_b1_processed = calculate_market_value(edited_b1)
 df_b3_processed = calculate_market_value(edited_b3)
 
-# --- 🆕 改进的桶2计算（包含浮动盈亏）---
 df_b2_processed = edited_b2.copy()
 try:
-    # 转换为数字
     df_b2_processed['margin_used'] = pd.to_numeric(df_b2_processed['margin_used'], errors='coerce').fillna(0.0)
     df_b2_processed['premium_received'] = pd.to_numeric(df_b2_processed['premium_received'], errors='coerce').fillna(0.0)
     df_b2_processed['cost_to_close'] = pd.to_numeric(df_b2_processed['cost_to_close'], errors='coerce').fillna(0.0)
     df_b2_processed['estimated_cost_to_close'] = pd.to_numeric(df_b2_processed['estimated_cost_to_close'], errors='coerce').fillna(0.0)
 
-    # DTE 计算
     today = pd.to_datetime(datetime.now().date())
     df_b2_processed['expiration_date'] = pd.to_datetime(df_b2_processed['expiration_date'], errors='coerce')
     df_b2_processed['days_to_expiration'] = (df_b2_processed['expiration_date'] - today).dt.days
     
-    # 🆕 计算盈亏
-    # Closed: 已实现盈亏 = 收到的 - 实际平仓成本
-    # Open: 浮动盈亏 = 收到的 - 估计平仓成本
     def calc_pl(row):
         if row['status'] == 'Closed':
             return row['premium_received'] - row['cost_to_close']
-        else:  # Open
+        else:
             return row['premium_received'] - row['estimated_cost_to_close']
     
     df_b2_processed['p_l'] = df_b2_processed.apply(calc_pl, axis=1)
     
-    # 分离 Open 和 Closed
     open_b2 = df_b2_processed[df_b2_processed['status'] == 'Open'].copy()
     closed_b2 = df_b2_processed[df_b2_processed['status'] == 'Closed'].copy()
     
-    # 总览指标
     total_b2_margin = open_b2['margin_used'].sum()
-    total_b2_realized_income = closed_b2['p_l'].sum()  # 已实现
-    total_b2_unrealized_pl = open_b2['p_l'].sum()  # 🆕 浮动盈亏
-    
-    # 🆕 桶2总盈亏
+    total_b2_realized_income = closed_b2['p_l'].sum()
+    total_b2_unrealized_pl = open_b2['p_l'].sum()
     total_b2_pl = total_b2_realized_income + total_b2_unrealized_pl
 
 except Exception as e:
@@ -315,8 +294,6 @@ except Exception as e:
     open_b2 = pd.DataFrame(columns=df_b2_processed.columns)
     closed_b2 = pd.DataFrame(columns=df_b2_processed.columns)
 
-# --- 🆕 整体计算 ---
-# 🆕 从设置表读取参数
 total_capital = float(st.session_state.settings.get('total_capital', 100000.0))
 monthly_target = float(st.session_state.settings.get('monthly_income_target', 1500.0))
 stop_loss_threshold = float(st.session_state.settings.get('stop_loss_threshold', -20.0))
@@ -330,12 +307,10 @@ total_b3_value = df_b3_processed['market_value'].sum()
 total_b3_cost = df_b3_processed['total_cost'].sum()
 total_b3_pl = df_b3_processed['p_l'].sum()
 
-# 总投资和总市值
 total_invested = total_b1_cost + total_b3_cost + total_b2_margin
 total_portfolio_value = total_b1_value + total_b3_value + total_b2_margin + total_b2_unrealized_pl
 cash_available = total_capital - total_invested
 
-# 🆕 整体盈亏和回报率
 total_pl = total_b1_pl + total_b2_pl + total_b3_pl
 total_return_pct = (total_pl / total_invested * 100) if total_invested > 0 else 0
 
@@ -344,7 +319,6 @@ with tab_dash:
     st.header("📊 投资组合总览")
     st.caption(f"最后更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # 🆕 改进的指标面板
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -397,13 +371,10 @@ with tab_dash:
     
     st.divider()
     
-   st.divider()
-    
-    # 🆕 桶2月收入目标进度
+    # 桶2月收入目标进度
     st.subheader("🎯 桶2 月收入目标")
     current_month_income = total_b2_pl
     
-    # 自定义进度条函数
     def custom_income_progress(current, target):
         """支持负数和超过100%的进度条"""
         if target == 0:
@@ -413,7 +384,6 @@ with tab_dash:
             percentage = (current / target) * 100
             progress_ratio = min(max(current / target, 0.0), 1.0)
         
-        # 颜色逻辑
         if percentage < 0:
             color, status = "#ff4444", "⚠️ 亏损"
         elif percentage < 50:
@@ -445,14 +415,12 @@ with tab_dash:
         elif percentage < 0:
             st.error(f"⚠️ 亏损 ${abs(current):,.0f}")
     
-    # 使用自定义进度条
     custom_income_progress(current_month_income, monthly_target)
     
     st.caption(f"💡 提示: 在 Google Sheet 的'设置'工作表中修改月收入目标 (当前: ${monthly_target:.0f})")
     
     st.divider()
 
-    # --- 桶1详情 ---
     st.subheader("❇️桶1：长期持仓核心")
     st.dataframe(
         df_b1_processed,
@@ -469,11 +437,9 @@ with tab_dash:
         hide_index=True
     )
 
-    # --- 桶2 Open持仓 ---
     st.subheader("🍀💵桶2：当前持仓 (Open)")
     st.caption("💡 '浮动盈亏' = 收到权利金 - 估计平仓成本")
     
-    # 🆕 添加DTE警告
     if not open_b2.empty:
         dte_warning = open_b2[open_b2['days_to_expiration'] < dte_warning_threshold]
         if not dte_warning.empty:
@@ -495,10 +461,8 @@ with tab_dash:
         hide_index=True
     )
 
-    # --- 桶3详情 ---
     st.subheader("🤑桶3：投机交易")
     
-    # 🆕 添加止损警告
     if not df_b3_processed.empty:
         loss_warning = df_b3_processed[df_b3_processed['p_l_pct'] < stop_loss_threshold]
         if not loss_warning.empty:
@@ -537,7 +501,6 @@ with tab_journal:
         hide_index=True
     )
     
-    # 🆕 已平仓交易统计
     if not closed_b2.empty:
         st.caption("📊 已平仓交易统计")
         col_stat1, col_stat2, col_stat3 = st.columns(3)
@@ -557,12 +520,11 @@ with col_refresh1:
 with col_refresh2:
     st.caption(f"💡 提示：股票价格每5分钟自动更新。期权价格需要手动在'交易日志'中更新。")
 
-# --- 🆕 14. 设置选项卡 ---
+# --- 14. 设置选项卡 ---
 with tab_settings:
     st.header("⚙️ 投资组合设置")
     st.info("💡 在这里修改您的投资组合参数。这些设置会保存到 Google Sheet，不会因为代码更新而丢失。")
     
-    # 创建设置DataFrame
     settings_data = {
         '参数名称': ['total_capital', 'monthly_income_target', 'stop_loss_threshold', 'dte_warning_threshold'],
         '当前值': [
@@ -602,16 +564,13 @@ with tab_settings:
     with col_save:
         if st.button("💾 保存设置", type="primary"):
             try:
-                # 准备保存的数据
                 settings_to_save = pd.DataFrame({
-                    'parameter_name': edited_settings['parameter_name'],
-                    'value': edited_settings['value']
+                    'parameter_name': edited_settings['参数名称'],
+                    'value': edited_settings['当前值']
                 })
                 
-                # 保存到Google Sheet
                 conn.update(worksheet="setting", data=settings_to_save)
                 
-                # 更新session state
                 for _, row in edited_settings.iterrows():
                     param_name = row['参数名称']
                     param_value = row['当前值']
@@ -619,7 +578,7 @@ with tab_settings:
                 
                 st.success("✅ 设置已保存！")
                 st.balloons()
-                st.rerun()  # 重新加载以应用新设置
+                st.rerun()
                 
             except Exception as e:
                 st.error(f"保存设置失败: {e}")
