@@ -447,7 +447,7 @@ def custom_income_progress(current, target):
 custom_income_progress(current_month_income, monthly_target)
 
     # --- 桶1详情 ---
-    st.subheader("❇️桶1：长期持仓核心")
+st.subheader("❇️桶1：长期持仓核心")
     st.dataframe(
         df_b1_processed,
         column_config={
