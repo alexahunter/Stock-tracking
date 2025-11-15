@@ -397,20 +397,55 @@ with tab_dash:
     
     st.divider()
     
-    # 🆕 桶2月收入目标进度
-    st.subheader("🎯 桶2 月收入目标")
-    current_month_income = total_b2_pl  # 简化版：用总盈亏作为本月收入
-    progress = min(current_month_income / monthly_target, 1.0) if monthly_target > 0 else 0
+   # 🆕 桶2月收入目标进度（修复版）
+st.subheader("🎯 桶2 月收入目标")
+current_month_income = total_b2_pl
+
+# 自定义进度条函数（添加到文件开头或这里）
+def custom_income_progress(current, target):
+    """支持负数和超过100%的进度条"""
+    if target == 0:
+        percentage = 0
+        progress_ratio = 0
+    else:
+        percentage = (current / target) * 100
+        progress_ratio = min(max(current / target, 0.0), 1.0)
     
-    col_prog1, col_prog2 = st.columns([3, 1])
-    with col_prog1:
-        st.progress(progress, text=f"进度: ${current_month_income:.0f} / ${monthly_target:.0f}")
-    with col_prog2:
-        st.metric("完成度", f"{progress*100:.0f}%")
+    # 颜色逻辑
+    if percentage < 0:
+        color, status = "#ff4444", "⚠️ 亏损"
+    elif percentage < 50:
+        color, status = "#ff9800", "📈 需努力"
+    elif percentage < 100:
+        color, status = "#2196F3", "💪 进行中"
+    elif percentage < 150:
+        color, status = "#4CAF50", "✅ 达标"
+    else:
+        color, status = "#FFD700", "🎉 超额"
     
-    st.caption(f"💡 提示: 在 Google Sheet 的'设置'工作表中修改月收入目标 (当前: ${monthly_target:.0f})")
+    st.markdown(f"""
+    <div style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-weight: 600;">月收入进度</span>
+            <span style="font-weight: 600; color: {color};">{status} {percentage:.1f}%</span>
+        </div>
+        <div style="background-color: #e0e0e0; border-radius: 10px; height: 30px; position: relative;">
+            <div style="background-color: {color}; width: {progress_ratio * 100}%; height: 100%; border-radius: 10px;"></div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 600;">
+                ${current:,.0f} / ${target:,.0f}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.divider()
+    if percentage > 100:
+        st.success(f"🎊 超额 ${current - target:,.0f}")
+    elif percentage < 0:
+        st.error(f"⚠️ 亏损 ${abs(current):,.0f}")
+st.divider()
+
+# 使用自定义进度条
+custom_income_progress(current_month_income, monthly_target)
 
     # --- 桶1详情 ---
     st.subheader("❇️桶1：长期持仓核心")
