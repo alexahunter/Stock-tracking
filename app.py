@@ -442,7 +442,6 @@ def custom_income_progress(current, target):
         st.success(f"🎊 超额 ${current - target:,.0f}")
     elif percentage < 0:
         st.error(f"⚠️ 亏损 ${abs(current):,.0f}")
-st.divider()
 
 # 使用自定义进度条
 custom_income_progress(current_month_income, monthly_target)
